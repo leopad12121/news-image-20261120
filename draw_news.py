@@ -1,198 +1,193 @@
 #!/usr/bin/env python3
-"""Draw a 1024x1024 newspaper front page summing up 20 November 2026.
+"""Draw the 20 November 2026 front page for the news-image-20261120 bounty.
 
-Deterministic: fixed text, fixed colours, fixed geometry. No network,
-no timestamps, no randomness. Running it twice produces a byte-identical
-entry.png.
+A 1024x1024 newspaper front page: masthead, one lead story, four more
+stories in two rows of two columns, and an "also in the news" strip.
+Everything is fixed text, fixed colours and fixed geometry, so running
+this script twice writes a byte-identical entry.png. No network, no
+clock, no randomness. Standard library plus Pillow only.
 """
 
 from PIL import Image, ImageDraw, ImageFont
 
-W, H = 1024, 1024
-PAPER = (247, 243, 234)
+PAGE_W, PAGE_H = 1024, 1024
+PAPER = (247, 243, 234)   # warm off-white newsprint
 INK = (17, 17, 17)
 GREY = (90, 86, 78)
 RED = (160, 30, 30)
 RULE = (60, 58, 52)
 
 SERIF = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
-SERIF_B = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
+SERIF_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 SANS = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-SANS_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+SANS_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+MARGIN = 48
 
 
-def font(path, size):
+def load(path, size):
     return ImageFont.truetype(path, size)
 
 
-def wrap(draw, text, fnt, width):
-    """Greedy word wrap to a pixel width; returns a list of lines."""
-    lines, cur = [], ""
+def wrap_lines(draw, text, fnt, max_width):
+    """Greedy word wrap; returns the lines that fit max_width pixels."""
+    lines = []
+    current = ""
     for word in text.split(" "):
-        trial = word if not cur else cur + " " + word
-        if draw.textlength(trial, font=fnt) <= width:
-            cur = trial
+        trial = word if not current else current + " " + word
+        if draw.textlength(trial, font=fnt) <= max_width:
+            current = trial
         else:
-            if cur:
-                lines.append(cur)
-            cur = word
-    if cur:
-        lines.append(cur)
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
     return lines
 
 
-def para(draw, x, y, text, fnt, width, leading, fill=INK):
-    for line in wrap(draw, text, fnt, width):
+def draw_para(draw, x, y, text, fnt, width, leading, fill=INK):
+    for line in wrap_lines(draw, text, fnt, width):
         draw.text((x, y), line, font=fnt, fill=fill)
         y += leading
     return y
 
 
-def kicker(draw, x, y, text):
-    fnt = font(SANS_B, 17)
+def draw_kicker(draw, x, y, text):
+    fnt = load(SANS_BOLD, 17)
     draw.text((x, y), text.upper(), font=fnt, fill=RED)
     return y + 22
 
 
-def hrule(draw, x0, x1, y, width=2, fill=RULE):
-    draw.line([(x0, y), (x1, y)], fill=fill, width=width)
+def draw_rule(draw, x0, x1, y, width=2):
+    draw.line([(x0, y), (x1, y)], fill=RULE, width=width)
+
+
+def draw_story(draw, x, y, width, kicker_text, headline, headline_size, body, body_size):
+    """One kicker + headline + body block; returns the y below it."""
+    y = draw_kicker(draw, x, y, kicker_text)
+    y = draw_para(draw, x, y, headline, load(SERIF_BOLD, headline_size),
+                  width, headline_size + 8)
+    y += 4
+    y = draw_para(draw, x, y, body, load(SERIF, body_size),
+                  width, body_size + 6)
+    return y
 
 
 def main():
-    img = Image.new("RGB", (W, H), PAPER)
+    img = Image.new("RGB", (PAGE_W, PAGE_H), PAPER)
     d = ImageDraw.Draw(img)
-    mx = 48  # side margin
 
-    # ---- Masthead ----
+    # Masthead
     y = 30
+    title_font = load(SERIF_BOLD, 60)
     title = "THE WORLD IN ONE DAY"
-    tf = font(SERIF_B, 60)
-    tw = d.textlength(title, font=tf)
-    d.text(((W - tw) / 2, y), title, font=tf, fill=INK)
+    d.text(((PAGE_W - d.textlength(title, font=title_font)) / 2, y),
+           title, font=title_font, fill=INK)
     y += 72
-    hrule(d, mx, W - mx, y, width=3)
+    draw_rule(d, MARGIN, PAGE_W - MARGIN, y, width=3)
     y += 10
+    date_font = load(SANS_BOLD, 18)
     dateline = "FRIDAY, 20 NOVEMBER 2026  -  THE DAY'S WORLD NEWS IN A SINGLE IMAGE"
-    df = font(SANS_B, 18)
-    dw = d.textlength(dateline, font=df)
-    d.text(((W - dw) / 2, y), dateline, font=df, fill=GREY)
+    d.text(((PAGE_W - d.textlength(dateline, font=date_font)) / 2, y),
+           dateline, font=date_font, fill=GREY)
     y += 30
-    hrule(d, mx, W - mx, y, width=3)
+    draw_rule(d, MARGIN, PAGE_W - MARGIN, y, width=3)
     y += 18
 
-    # ---- Lead story: Trump, Xi, Putin ----
-    y = kicker(d, mx, y, "Lead story - Shenzhen, China")
-    y = para(
-        d, mx, y,
-        "Trump, Xi and Putin sign 'peace declaration'",
-        font(SERIF_B, 44), W - 2 * mx, 52,
-    )
-    y += 4
-    y = para(
-        d, mx, y,
-        "The leaders of the United States, China and Russia met for the first "
-        "time ever as a trio on the sidelines of the APEC summit in Shenzhen, "
-        "declaring that \"a nuclear war cannot be won and must never be "
-        "fought\". Their declaration pledges dialogue on nuclear risks and "
-        "UN reform - but says nothing about the wars in Ukraine or Iran.",
-        font(SERIF, 20), W - 2 * mx, 27,
+    # Lead story, full width: the overnight strike on Ukraine
+    y = draw_story(
+        d, MARGIN, y, PAGE_W - 2 * MARGIN,
+        "Lead story - Kyiv and Poland",
+        "Russia's biggest strike of the war hits Kyiv - and lands in Poland",
+        44,
+        "Russia fired more than 400 drones and over 110 missiles at Ukraine "
+        "overnight, killing at least eight people. Three bridges across the "
+        "Dnipro in Kyiv were hit, and two missiles and a drone also fell in "
+        "Poland, scrambling Polish and NATO jets.",
+        20,
     )
     y += 12
-    hrule(d, mx, W - mx, y, width=2)
+    draw_rule(d, MARGIN, PAGE_W - MARGIN, y)
     y += 14
 
-    # ---- Middle row: two stories side by side ----
-    col_w = (W - 2 * mx - 28) // 2
-    left_x = mx
-    right_x = mx + col_w + 28
+    # Two-column rows
+    col_w = (PAGE_W - 2 * MARGIN - 28) // 2
+    left_x = MARGIN
+    right_x = MARGIN + col_w + 28
+
+    # Middle row: the cyclone, then Trump on Iran
     row_y = y
-
-    yy = kicker(d, left_x, row_y, "The Hague - World court")
-    yy = para(
-        d, left_x, yy,
-        "Top UN court: Myanmar committed genocide",
-        font(SERIF_B, 28), col_w, 34,
+    left_end = draw_story(
+        d, left_x, row_y, col_w,
+        "India - Cyclone Akvan",
+        "Cyclone Akvan hits India's east coast",
+        28,
+        "Cyclone Akvan made landfall near Gopalpur on Friday morning with "
+        "winds of 70-80 km/h. About 372,000 people were evacuated to "
+        "shelters, and no casualties or major damage were reported.",
+        18,
     )
-    yy += 4
-    yy = para(
-        d, left_x, yy,
-        "The International Court of Justice rules that Myanmar committed "
-        "genocide against the Rohingya in its 2017 military operations.",
-        font(SERIF, 18), col_w, 24,
+    right_end = draw_story(
+        d, right_x, row_y, col_w,
+        "Washington - Iran",
+        "Trump: no rush on new Iran strikes",
+        28,
+        "President Trump said there is no rush to decide on new strikes on "
+        "Iran, pushing any decision into 2027, after earlier suggesting "
+        "Tehran would be more open to a deal after the US midterms.",
+        18,
     )
-
-    yy2 = kicker(d, right_x, row_y, "Riyadh - Saudi Arabia")
-    yy2 = para(
-        d, right_x, yy2,
-        "Houthi strike damages Riyadh's tallest tower",
-        font(SERIF_B, 28), col_w, 34,
-    )
-    yy2 += 4
-    yy2 = para(
-        d, right_x, yy2,
-        "A missile strike damages the skyscraper housing Saudi Arabia's "
-        "sovereign wealth fund, the latest blow in the group's campaign.",
-        font(SERIF, 18), col_w, 24,
-    )
-
-    y = max(yy, yy2) + 12
-    hrule(d, mx, W - mx, y, width=2)
+    y = max(left_end, right_end) + 12
+    draw_rule(d, MARGIN, PAGE_W - MARGIN, y)
     y += 14
 
-    # ---- Bottom row: two stories side by side ----
+    # Bottom row: the climate talks, then Voyager 1
     row_y = y
-    yy = kicker(d, left_x, row_y, "India - Cyclone Akvan")
-    yy = para(
-        d, left_x, yy,
-        "Cyclone Akvan makes landfall on India's east coast",
-        font(SERIF_B, 28), col_w, 34,
+    left_end = draw_story(
+        d, left_x, row_y, col_w,
+        "Antalya, Turkiye - Climate",
+        "COP31 talks run into overtime",
+        28,
+        "Nearly 200 nations deadlocked at the UN climate talks in Antalya "
+        "over a draft deal that drops any mention of fossil fuels. "
+        "Negotiators were sent into the weekend with no deal in sight.",
+        18,
     )
-    yy += 4
-    yy = para(
-        d, left_x, yy,
-        "More than 120,000 people are evacuated in Odisha and Andhra "
-        "Pradesh as the severe storm comes ashore, with trains cancelled.",
-        font(SERIF, 18), col_w, 24,
+    right_end = draw_story(
+        d, right_x, row_y, col_w,
+        "Space - Voyager 1",
+        "Voyager 1 calls home from a light-day away",
+        28,
+        "NASA's Voyager 1 phoned home from about one light-day away - the "
+        "farthest human-made object, still talking after nearly half a "
+        "century.",
+        18,
     )
-
-    yy2 = kicker(d, right_x, row_y, "Wall Street - Markets")
-    yy2 = para(
-        d, right_x, yy2,
-        "Anthropic debuts at a $2 trillion valuation",
-        font(SERIF_B, 28), col_w, 34,
-    )
-    yy2 += 4
-    yy2 = para(
-        d, right_x, yy2,
-        "The AI lab's Nasdaq debut tops SpaceX's record listing, even as "
-        "its shares give back an early spike and Wall Street falls.",
-        font(SERIF, 18), col_w, 24,
-    )
-
-    y = max(yy, yy2) + 12
-    hrule(d, mx, W - mx, y, width=2)
+    y = max(left_end, right_end) + 12
+    draw_rule(d, MARGIN, PAGE_W - MARGIN, y)
     y += 14
 
-    # ---- Also in the news strip ----
-    y = kicker(d, mx, y, "Also in the news")
+    # Also in the news
+    y = draw_kicker(d, MARGIN, y, "Also in the news")
     also = [
-        "Ukraine hits the Crimea Bridge again; Putin rules out any sea or energy truce.",
-        "Israel launches a ground operation in Hamas-controlled central Gaza.",
-        "Three oil tankers catch fire after hitting mines east of the Strait of Hormuz.",
-        "NASA's Voyager 1 phones home from a full light-day away - the farthest ever.",
+        "White House fires its cyber chief after tech chaos.",
+        "Six killed as a gas blast collapses a housing block in Georgia.",
+        "Trump bought up to $265,000 of Nvidia stock in September, a disclosure shows.",
+        "US signs a new military pact with Venezuela.",
     ]
     for item in also:
-        d.text((mx + 18, y), "-", font=font(SANS_B, 17), fill=RED)
-        y = para(d, mx + 40, y, item, font(SERIF, 17), W - 2 * mx - 40, 22)
+        d.text((MARGIN + 18, y), "-", font=load(SANS_BOLD, 17), fill=RED)
+        y = draw_para(d, MARGIN + 40, y, item, load(SERIF, 17),
+                      PAGE_W - 2 * MARGIN - 40, 22)
 
-    # ---- Footer ----
-    y = H - 34
-    hrule(d, mx, W - mx, y, width=2)
+    # Footer
+    y = PAGE_H - 34
+    draw_rule(d, MARGIN, PAGE_W - MARGIN, y)
     y += 8
+    foot_font = load(SANS, 15)
     foot = "Drawn entirely with Python and PIL - no photographs, no network.  -  20 November 2026"
-    ff = font(SANS, 15)
-    fw = d.textlength(foot, font=ff)
-    d.text(((W - fw) / 2, y), foot, font=ff, fill=GREY)
+    d.text(((PAGE_W - d.textlength(foot, font=foot_font)) / 2, y),
+           foot, font=foot_font, fill=GREY)
 
     img.save("entry.png", format="PNG")
     print("wrote entry.png (1024x1024)")
