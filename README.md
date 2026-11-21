@@ -12,18 +12,19 @@ Python and PIL — no photos, no network calls.
 
 ## The five stories
 
-1. **Trump, Xi and Putin sign a "peace declaration"** — the three leaders
-   hold their first-ever three-way summit in Shenzhen at APEC and pledge
-   dialogue on nuclear risks, saying nothing about Ukraine or Iran.
-2. **UN top court: Myanmar committed genocide** — the International Court
-   of Justice rules Myanmar committed genocide against the Rohingya in
-   its 2017 military operations.
-3. **Houthi strike damages Riyadh's tallest tower** — a missile damages
-   the skyscraper housing Saudi Arabia's sovereign wealth fund.
-4. **Cyclone Akvan makes landfall on India's east coast** — more than
-   120,000 people evacuated in Odisha and Andhra Pradesh.
-5. **Anthropic debuts at a $2 trillion valuation** — the AI lab's Nasdaq
-   debut tops SpaceX's record listing, even as Wall Street falls.
+1. **Russia's biggest strike of the war hits Kyiv — and lands in Poland**
+   — more than 400 drones and over 110 missiles fired overnight, at
+   least eight killed, three Kyiv bridges hit, and two missiles and a
+   drone falling in Poland.
+2. **Cyclone Akvan hits India's east coast** — landfall near Gopalpur on
+   Friday morning; about 372,000 people evacuated, no casualties or
+   major damage reported.
+3. **Trump: no rush on new Iran strikes** — the President says any
+   decision on new strikes on Iran can wait until 2027.
+4. **COP31 talks run into overtime** — nearly 200 nations deadlocked in
+   Antalya over a draft deal that drops any mention of fossil fuels.
+5. **Voyager 1 calls home from a light-day away** — the farthest
+   human-made object, still talking after nearly half a century.
 
 A short "Also in the news" strip at the bottom notes four more items from
 the day.
